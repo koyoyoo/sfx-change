@@ -42,16 +42,31 @@ pip install -e .
 
 ## 可视化界面
 
-安装后启动：
+先按上一节创建虚拟环境并执行 `pip install -e .`，然后启动：
 
 ```bash
+# macOS / Linux
 ogg2wav-gui
+```
+
+```powershell
+# Windows PowerShell（已激活 .venv）
+ogg2wav-gui
+
+# 如果没有激活虚拟环境，也可以直接运行
+.\.venv\Scripts\ogg2wav-gui.exe
 ```
 
 也可以不安装，直接从源码启动：
 
 ```bash
+# macOS / Linux
 PYTHONPATH=src python -m sfx_change.gui
+```
+
+```powershell
+# Windows PowerShell
+$env:PYTHONPATH="src"; python -m sfx_change.gui; Remove-Item Env:PYTHONPATH
 ```
 
 界面中选择输入文件或目录、输出目录与转换选项，点击“开始转换”即可；输出目录留空时会在原 OGG 文件旁生成 WAV。
