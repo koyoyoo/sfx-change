@@ -14,6 +14,12 @@ from typing import Iterable, List, Optional, Sequence
 
 
 @dataclass(frozen=True)
+class SourceItem:
+    source: Path
+    root: Optional[Path] = None
+
+
+@dataclass(frozen=True)
 class ConversionJob:
     source: Path
     target: Path
@@ -40,23 +46,47 @@ def find_ogg_files(input_path: Path) -> List[Path]:
     )
 
 
-def build_jobs(
-    sources: Iterable[Path],
-    input_path: Path,
+def find_ogg_items(input_paths: Iterable[Path]) -> List[SourceItem]:
+    """Return OGG files from multiple file or directory inputs, without duplicates."""
+    items: List[SourceItem] = []
+    seen = set()
+    for input_path in input_paths:
+        if input_path.is_file():
+            candidates = [SourceItem(input_path)] if input_path.suffix.lower() == ".ogg" else []
+        elif input_path.is_dir():
+            candidates = [SourceItem(path, input_path) for path in find_ogg_files(input_path)]
+        else:
+            raise FileNotFoundError(f"输入路径不存在：{input_path}")
+        for item in candidates:
+            key = os.path.normcase(str(item.source))
+            if key not in seen:
+                seen.add(key)
+                items.append(item)
+    return items
+
+
+def build_jobs_for_items(
+    items: Iterable[SourceItem],
     output_dir: Optional[Path],
     flat: bool = False,
 ) -> List[ConversionJob]:
-    """Map each OGG file to its WAV output path."""
+    """Map OGG files from one or more inputs to their WAV output paths."""
+    item_list = list(items)
+    roots = {item.root for item in item_list if item.root is not None}
+    multiple_roots = len(roots) > 1
     jobs: List[ConversionJob] = []
     targets = {}
-    for source in sources:
+    for item in item_list:
+        source = item.source
         if output_dir is None:
             target = source.with_suffix(".wav")
         else:
-            if flat or input_path.is_file():
+            if flat or item.root is None:
                 relative = Path(source.name)
             else:
-                relative = source.relative_to(input_path)
+                relative = source.relative_to(item.root)
+                if multiple_roots:
+                    relative = Path(item.root.name) / relative
             target = output_dir / relative.with_suffix(".wav")
         target_key = os.path.normcase(str(target))
         if target_key in targets:
@@ -67,6 +97,18 @@ def build_jobs(
         targets[target_key] = source
         jobs.append(ConversionJob(source=source, target=target))
     return jobs
+
+
+def build_jobs(
+    sources: Iterable[Path],
+    input_path: Path,
+    output_dir: Optional[Path],
+    flat: bool = False,
+) -> List[ConversionJob]:
+    """Map each OGG file to its WAV output path."""
+    root = None if input_path.is_file() else input_path
+    items = [SourceItem(source, root) for source in sources]
+    return build_jobs_for_items(items, output_dir, flat=flat)
 
 
 def convert_one(

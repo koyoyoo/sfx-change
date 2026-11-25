@@ -79,7 +79,7 @@ PYTHONPATH=src python -m sfx_change.gui
 $env:PYTHONPATH="src"; python -m sfx_change.gui; Remove-Item Env:PYTHONPATH
 ```
 
-界面中选择输入文件或目录、输出目录与转换选项，点击“开始转换”即可；输出目录留空时会在原 OGG 文件旁生成 WAV。若系统 `PATH` 中没有 ffmpeg，但已安装 `imageio-ffmpeg` Python 包，界面会自动使用其内置 ffmpeg。
+界面中可多选输入文件或选择目录、设置输出目录与转换选项，点击“开始转换”即可；输出目录留空时会在原 OGG 文件旁生成 WAV。若系统 `PATH` 中没有 ffmpeg，但已安装 `imageio-ffmpeg` Python 包，界面会自动使用其内置 ffmpeg。
 
 ## 命令行使用
 

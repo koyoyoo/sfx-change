@@ -4,7 +4,14 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from sfx_change.cli import build_jobs, convert_one, find_ogg_files, ConversionJob
+from sfx_change.cli import (
+    ConversionJob,
+    build_jobs,
+    build_jobs_for_items,
+    convert_one,
+    find_ogg_files,
+    find_ogg_items,
+)
 
 
 class CliTests(unittest.TestCase):
@@ -48,6 +55,40 @@ class CliTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "同一个 WAV"):
                 build_jobs(sources, root, output, flat=True)
+
+    def test_find_ogg_items_accepts_multiple_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "first.ogg"
+            second = root / "second.OGG"
+            first.write_bytes(b"ogg")
+            second.write_bytes(b"ogg")
+
+            items = find_ogg_items([first, second, first])
+
+            self.assertEqual([item.source for item in items], [first, second])
+            self.assertTrue(all(item.root is None for item in items))
+
+    def test_build_jobs_for_items_prefixes_multiple_roots(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first_root = root / "one"
+            second_root = root / "two"
+            first_root.mkdir()
+            second_root.mkdir()
+            first = first_root / "hit.ogg"
+            second = second_root / "hit.ogg"
+            first.write_bytes(b"ogg")
+            second.write_bytes(b"ogg")
+            output = root / "output"
+            items = find_ogg_items([first_root, second_root])
+
+            jobs = build_jobs_for_items(items, output)
+
+            self.assertEqual(
+                {job.target for job in jobs},
+                {output / "one" / "hit.wav", output / "two" / "hit.wav"},
+            )
 
     def test_convert_one_invokes_ffmpeg_with_wav_pcm(self):
         with tempfile.TemporaryDirectory() as tmp:

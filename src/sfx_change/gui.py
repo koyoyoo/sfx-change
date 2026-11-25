@@ -16,7 +16,7 @@ except ImportError:
     tk = None
     filedialog = messagebox = scrolledtext = ttk = None
 
-from .cli import ConversionResult, build_jobs, convert_one, find_ogg_files
+from .cli import ConversionResult, build_jobs_for_items, convert_one, find_ogg_items
 
 
 def detect_ffmpeg() -> str:
@@ -43,6 +43,8 @@ class OggToWavGui:
         self.worker: Optional[threading.Thread] = None
         self.total = 0
         self.completed = 0
+        self.input_paths: list[Path] = []
+        self.input_display = ""
 
         self.input_var = tk.StringVar()
         self.output_var = tk.StringVar()
@@ -66,7 +68,7 @@ class OggToWavGui:
         ttk.Entry(container, textvariable=self.input_var).grid(row=0, column=1, sticky=tk.EW, padx=8, pady=4)
         input_buttons = ttk.Frame(container)
         input_buttons.grid(row=0, column=2, sticky=tk.E, pady=4)
-        ttk.Button(input_buttons, text="选择文件", command=self._choose_input_file).pack(side=tk.LEFT)
+        ttk.Button(input_buttons, text="选择文件（可多选）", command=self._choose_input_file).pack(side=tk.LEFT)
         ttk.Button(input_buttons, text="选择目录", command=self._choose_input_dir).pack(side=tk.LEFT, padx=(6, 0))
 
         ttk.Label(container, text="输出目录").grid(row=1, column=0, sticky=tk.W, pady=4)
@@ -118,15 +120,20 @@ class OggToWavGui:
         self.log.grid(row=7, column=0, columnspan=3, sticky=tk.NSEW)
         container.rowconfigure(7, weight=1)
 
+    def _set_input_paths(self, paths) -> None:
+        self.input_paths = [Path(path).expanduser().resolve() for path in paths]
+        self.input_display = "; ".join(str(path) for path in self.input_paths)
+        self.input_var.set(self.input_display)
+
     def _choose_input_file(self) -> None:
-        path = filedialog.askopenfilename(filetypes=[("OGG 音频", "*.ogg"), ("所有文件", "*.*")])
-        if path:
-            self.input_var.set(path)
+        paths = filedialog.askopenfilenames(filetypes=[("OGG 音频", "*.ogg"), ("所有文件", "*.*")])
+        if paths:
+            self._set_input_paths(paths)
 
     def _choose_input_dir(self) -> None:
         path = filedialog.askdirectory()
         if path:
-            self.input_var.set(path)
+            self._set_input_paths([path])
 
     def _choose_output_dir(self) -> None:
         path = filedialog.askdirectory()
@@ -185,7 +192,10 @@ class OggToWavGui:
 
         output_text = self.output_var.get().strip()
         output_dir = Path(output_text).expanduser().resolve() if output_text else None
-        input_path = Path(input_text).expanduser().resolve()
+        if self.input_paths and input_text == self.input_display:
+            input_paths = self.input_paths
+        else:
+            input_paths = [Path(input_text).expanduser().resolve()]
 
         self.log.configure(state=tk.NORMAL)
         self.log.delete("1.0", tk.END)
@@ -203,14 +213,14 @@ class OggToWavGui:
 
         self.worker = threading.Thread(
             target=self._conversion_worker,
-            args=(input_path, output_dir, ffmpeg, jobs_count, sample_rate, channels, overwrite, flat),
+            args=(input_paths, output_dir, ffmpeg, jobs_count, sample_rate, channels, overwrite, flat),
             daemon=True,
         )
         self.worker.start()
 
     def _conversion_worker(
         self,
-        input_path: Path,
+        input_paths: list[Path],
         output_dir: Optional[Path],
         ffmpeg: str,
         jobs_count: int,
@@ -220,11 +230,15 @@ class OggToWavGui:
         flat: bool,
     ) -> None:
         try:
-            sources = find_ogg_files(input_path)
-            if not sources:
-                self.events.put(("empty", f"未找到 OGG 文件：{input_path}"))
+            items = find_ogg_items(input_paths)
+            if not items:
+                if len(input_paths) == 1:
+                    detail = str(input_paths[0])
+                else:
+                    detail = f"已选择的 {len(input_paths)} 个输入"
+                self.events.put(("empty", f"未找到 OGG 文件：{detail}"))
                 return
-            jobs = build_jobs(sources, input_path, output_dir, flat=flat)
+            jobs = build_jobs_for_items(items, output_dir, flat=flat)
             self.events.put(("total", len(jobs)))
             with concurrent.futures.ThreadPoolExecutor(max_workers=jobs_count) as executor:
                 futures = [
