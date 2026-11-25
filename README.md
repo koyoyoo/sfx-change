@@ -4,6 +4,7 @@
 
 ## 特性
 
+- 提供桌面可视化界面与命令行两种使用方式
 - 递归批量转换，支持单个文件或整个目录
 - 默认在原文件旁生成同名 WAV，也可输出到独立目录
 - 输出目录可选择保留或忽略原始目录层级
@@ -17,7 +18,7 @@
 
 ```bash
 # Ubuntu / Debian
-sudo apt install ffmpeg
+sudo apt install ffmpeg python3-tk
 
 # macOS（Homebrew）
 brew install ffmpeg
@@ -39,7 +40,23 @@ py -m venv .venv
 pip install -e .
 ```
 
-## 使用
+## 可视化界面
+
+安装后启动：
+
+```bash
+ogg2wav-gui
+```
+
+也可以不安装，直接从源码启动：
+
+```bash
+PYTHONPATH=src python -m sfx_change.gui
+```
+
+界面中选择输入文件或目录、输出目录与转换选项，点击“开始转换”即可；输出目录留空时会在原 OGG 文件旁生成 WAV。
+
+## 命令行使用
 
 转换目录中的所有 OGG，并在原文件旁生成 WAV：
 

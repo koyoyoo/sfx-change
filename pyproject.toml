@@ -12,6 +12,7 @@ license = {text = "MIT"}
 
 [project.scripts]
 ogg2wav = "sfx_change.cli:main"
+ogg2wav-gui = "sfx_change.gui:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
