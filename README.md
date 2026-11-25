@@ -42,6 +42,16 @@ pip install -e .
 
 ## 可视化界面
 
+### Windows 免安装启动（推荐）
+
+无需 `pip install`，在仓库根目录直接运行：
+
+```powershell
+.\ogg2wav-gui.cmd
+```
+
+### 已安装命令行启动
+
 先按上一节创建虚拟环境并执行 `pip install -e .`，然后启动：
 
 ```bash
@@ -57,7 +67,7 @@ ogg2wav-gui
 .\.venv\Scripts\ogg2wav-gui.exe
 ```
 
-也可以不安装，直接从源码启动：
+### 源码启动
 
 ```bash
 # macOS / Linux
