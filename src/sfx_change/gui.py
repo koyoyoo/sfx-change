@@ -19,6 +19,19 @@ except ImportError:
 from .cli import ConversionResult, build_jobs, convert_one, find_ogg_files
 
 
+def detect_ffmpeg() -> str:
+    """Prefer ffmpeg on PATH, then the optional imageio-ffmpeg bundled binary."""
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    try:
+        import imageio_ffmpeg
+
+        bundled = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        return "ffmpeg"
+    return bundled if Path(bundled).exists() else "ffmpeg"
+
+
 class OggToWavGui:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -33,7 +46,7 @@ class OggToWavGui:
 
         self.input_var = tk.StringVar()
         self.output_var = tk.StringVar()
-        self.ffmpeg_var = tk.StringVar(value="ffmpeg")
+        self.ffmpeg_var = tk.StringVar(value=detect_ffmpeg())
         self.jobs_var = tk.IntVar(value=4)
         self.overwrite_var = tk.BooleanVar(value=False)
         self.flat_var = tk.BooleanVar(value=False)
